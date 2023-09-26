@@ -21,8 +21,8 @@
 
 module HermesBuffer
 #(
-    parameter FLIT_SIZE = 32,
-    parameter BUFFER_SIZE = 8   /* Power of 2 */
+    parameter BUFFER_SIZE = 8   /* Power of 2  */
+    parameter FLIT_SIZE   = 32  /* Minimum: 20 */
 )
 (
     input  logic clk_i,
@@ -36,6 +36,7 @@ module HermesBuffer
     output logic req_o,
     output logic credit_o,
     output logic data_av_o,
+    output logic sending_o,
     output logic [(FLIT_SIZE - 1):0] data_o
 );
 
@@ -156,6 +157,9 @@ module HermesBuffer
     /* FSM behavior */
     /* Routing request control*/
     assign req_o = (state == SEND_REQ);
+
+    /* Active */
+    assign sending_o = (state inside {SEND_HEADER, SEND_SIZE, SEND_PAYLOAD});
 
     /* Data request control */
     assign data_av_o = (state inside {SEND_HEADER, SEND_SIZE, SEND_PAYLOAD} && !empty);
