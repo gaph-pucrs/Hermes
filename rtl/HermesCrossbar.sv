@@ -1,14 +1,27 @@
+/**
+ * Hermes
+ * @file HermesCrossbar.sv
+ * 
+ * @author Angelo Elias Dal Zotto (angelo.dalzotto@edu.pucrs.br)
+ * GAPH - Hardware Design Support Group (https://corfu.pucrs.br/)
+ * PUCRS - Pontifical Catholic University of Rio Grande do Sul (http://pucrs.br/)
+ * 
+ * @date September 2023
+ * 
+ * @brief SystemVerilog Hermes crossbar module.
+ */
+
 module HermesCrossbar
+    import HermesPkg::*;
 #(
-    parameter FLIT_SIZE = 32,
-    parameter NPORT     = 5
+    parameter FLIT_SIZE = 32
 )
 (
     input  logic                         req_i     [(NPORT - 1):0],
     input  logic                         credit_i  [(NPORT - 1):0],
     input  logic                         free_i    [(NPORT - 1):0],
-    input  logic [($clog2(NPORT) - 1):0] inport_i  [(NPORT - 1):0],
-    input  logic [($clog2(NPORT) - 1):0] outport_i [(NPORT - 1):0],
+    input  hermes_port_t                 inport_i  [(NPORT - 1):0],
+    input  hermes_port_t                 outport_i [(NPORT - 1):0],
     input  logic [(FLIT_SIZE - 1):0]     data_i    [(NPORT - 1):0],
 
     output logic                         tx_o      [(NPORT - 1):0],
