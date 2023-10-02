@@ -42,10 +42,10 @@ module tb #(parameter int X_SIZE = 4,
             .rst_ni         (rst_n),
             .rx_i           (rx),
             .data_i         (data_in),
-            .credit_i       (credit_i)
+            .credit_i       (credit_i),
             .tx_o           (tx),
             .data_o         (data_out),
-            .credit_o       (credit_o),
+            .credit_o       (credit_o)
     );
 
     // Declare file handle and line buffer for each router
