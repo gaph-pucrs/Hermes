@@ -70,7 +70,7 @@ module tb #(parameter int X_SIZE = 4,
 
             if ($fopen(log_name, "w") != 0) begin
                 log_handle[i] = $fopen(log_name, "w");
-                $display("Router %2d: log %s opened successfully.", i, file_name);
+                $display("Router %2d: log  %s opened successfully.", i, log_name);
             end
         end
     end
@@ -89,8 +89,8 @@ module tb #(parameter int X_SIZE = 4,
     for (j = 0; j < NUM_ROUTERS; j++) begin
         always @(posedge clk) begin
             if (rst_n == 1'b0) begin
-                data_in[j]  <= '0;
-                rx[j]       <= '0;
+                data_in[j]  = '0;
+                rx[j]       = '0;
             end 
             // Wait for the specified time
             else if (int'($time) <= time_injection[j]) begin
@@ -105,26 +105,26 @@ module tb #(parameter int X_SIZE = 4,
                         automatic int pos_x = j % X_SIZE;
                         automatic int pos_y = j / X_SIZE;
 
-                        data_in[j]  <= {pos_x[7:0], pos_y[7:0], target_x[j][7:0], target_y[j][7:0]};
-                        rx[j]       <= 1;
+                        data_in[j]  = {pos_x[7:0], pos_y[7:0], target_x[j][7:0], target_y[j][7:0]};
+                        rx[j]       = 1;
                         $display("[%0d] - Router %2d: SENDING PACKET %d -> Size %0d -> from (%0d, %0d) to (%0d, %0d)", $time, j, (j * 100_000) + time_injection[j], packet_size[j], pos_x, pos_y, target_x[j], target_y[j]);
                     end
                     else if (index_rx[j] == 1) begin
-                        data_in[j]  <= {packet_size[j]};
+                        data_in[j]  = {packet_size[j]};
                     end
                     else if (index_rx[j] == 2) begin
-                        data_in[j]  <= {int'($time)};
+                        data_in[j]  = {int'($time)};
                     end
                     else if (index_rx[j] == 3) begin
                         automatic logic[31:0] packetNumber = {(j * 100_000) + time_injection[j]};
-                        data_in[j]  <= packetNumber;
+                        data_in[j]  = packetNumber;
                     end
                     else if (index_rx[j] < packet_size[j] + 2) begin
-                        data_in[j]  <= {index_rx[j] - 1};
+                        data_in[j]  = {index_rx[j] - 1};
                     end
                     else begin
                         processed_rx[j] <= 1;
-                        rx[j]           <= 0;
+                        rx[j]           = 0;
                     end
 
                     index_rx[j] <= index_rx[j] + 1;
@@ -135,7 +135,7 @@ module tb #(parameter int X_SIZE = 4,
                     $sscanf(line_buffer[j], "%d %d %d %d", time_injection[j], target_x[j], target_y[j], packet_size[j]);
                     $display("[%0d] - Router %2d: time_injection = %0d, target_x = %0d, target_y = %0d, packet_size = %0d", $time, j, time_injection[j], target_x[j], target_y[j], packet_size[j]);
                     
-                    index_rx[j]     <= 0;
+                    index_rx[j]     = 0;
                     processed_rx[j] <= 0;
                     printed_rx[j]   <= 0;
                 end
