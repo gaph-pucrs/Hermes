@@ -132,7 +132,7 @@ module HermesBuffer
                     if (data_ack_i)
                         flit_cntr <= flit_cntr - 1'b1;
                 end
-                SEND_SIZE:    flit_cntr <= buffer[tail];
+                SEND_SIZE:    flit_cntr <= buffer[tail] - 1'b1;
                 default:      flit_cntr <= '0;
             endcase
         end
