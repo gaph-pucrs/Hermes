@@ -31,6 +31,9 @@ module HermesSwitch
     output hermes_port_t             outport_o [(NPORT - 1):0]
 );
 
+    hermes_port_t                   dirs [1:0];
+    logic [($clog2(NDIM) - 1):0]    dim;
+
     /* FSM Control */
     typedef enum logic [5:0] {
         RT_WAIT   = 6'b000010,
@@ -50,10 +53,17 @@ module HermesSwitch
             state <= next_state;
     end
 
+    logic has_req;
+    always_comb begin
+        has_req = 1'b0;
+        for (int i = 0; i < NPORT; i++)
+            has_req |= req_i[i];
+    end
+
     /* FSM transitions */
     always_comb begin
         case (state)
-            RT_WAIT:    next_state = (req_i != '0) ? RT_ARBIT : RT_WAIT;
+            RT_WAIT:    next_state = has_req ? RT_ARBIT : RT_WAIT;
             RT_ARBIT:   next_state = RT_SWITCH;
             RT_SWITCH:  next_state = free_o[dirs[dim]] ? RT_MUX : RT_ARBIT;
             RT_MUX:     next_state = RT_ACK;
@@ -117,7 +127,6 @@ module HermesSwitch
 
     /* Decide which dimension (x,y, or local) routing will take */
     localparam NDIM = 2;
-    logic [($clog2(NDIM) - 1):0] dim;
     always_comb begin
         dim = '0;
         for (int i = 0; i < NDIM; i++) begin
@@ -128,7 +137,6 @@ module HermesSwitch
         end
     end
 
-    hermes_port_t dirs [1:0];
     assign dirs[0] = (tgts[0] > ADDRS[0]) ? HERMES_EAST  : HERMES_WEST;
     assign dirs[1] = (tgts[1] > ADDRS[1]) ? HERMES_NORTH : HERMES_SOUTH;
 

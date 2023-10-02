@@ -21,7 +21,7 @@
 
 module HermesBuffer
 #(
-    parameter BUFFER_SIZE = 8   /* Power of 2  */
+    parameter BUFFER_SIZE = 8,  /* Power of 2  */
     parameter FLIT_SIZE   = 32  /* Minimum: 20 */
 )
 (

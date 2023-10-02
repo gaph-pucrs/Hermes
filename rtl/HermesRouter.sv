@@ -40,10 +40,10 @@ module HermesRouter
 
     genvar port;
     generate
-        for (port = 0; port < NPORT; i++) begin
+        for (port = 0; port < NPORT; port++) begin
             HermesBuffer #(
                 .BUFFER_SIZE(BUFFER_SIZE),
-                .FLIT_SIZE(FLIT_SIZE)
+                .FLIT_SIZE  (FLIT_SIZE)
             )
             buffer
             (
