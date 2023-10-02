@@ -139,8 +139,7 @@ module HermesSwitch
             for (int i = 0; i < NPORT; i++)
                 sending_r[i] <= '0;
         else
-            for (int i = 0; i < NPORT; i++)
-                sending_r <= sending_i;
+            sending_r <= sending_i;
     end
 
     always_ff @(posedge clk_i or negedge rst_ni) begin
