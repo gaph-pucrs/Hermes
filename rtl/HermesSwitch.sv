@@ -31,8 +31,9 @@ module HermesSwitch
     output hermes_port_t             outport_o [(NPORT - 1):0]
 );
 
-    hermes_port_t                   dirs [1:0];
-    logic [($clog2(NDIM) - 1):0]    dim;
+    hermes_port_t                   dirs [2:0];
+    localparam NDIM = 3;
+    logic [($clog2(NDIM - 1)):0]        dim;
 
     /* FSM Control */
     typedef enum logic [5:0] {
@@ -126,10 +127,9 @@ module HermesSwitch
     assign force_port = hermes_port_t'(data_i[sel_port][(FLIT_SIZE - 2):(FLIT_SIZE - $clog2(NPORT) - 1)]);
 
     /* Decide which dimension (x,y, or local) routing will take */
-    localparam NDIM = 2;
     always_comb begin
-        dim = '0;
-        for (int i = 0; i < NDIM; i++) begin
+        dim = $clog2(NDIM)'(NDIM - 1);
+        for (int i = 0; i < NDIM - 1; i++) begin
             if (ADDRS[i] != tgts[i]) begin
                 dim = $clog2(NDIM)'(i);
                 break;
@@ -139,6 +139,7 @@ module HermesSwitch
 
     assign dirs[0] = (tgts[0] > ADDRS[0]) ? HERMES_EAST  : HERMES_WEST;
     assign dirs[1] = (tgts[1] > ADDRS[1]) ? HERMES_NORTH : HERMES_SOUTH;
+    assign dirs[2] = HERMES_LOCAL;
 
     /* Active port control */
     logic sending_r [(NPORT - 1):0];
@@ -175,14 +176,9 @@ module HermesSwitch
             end
         end
         else if (state == RT_SWITCH) begin
-            if (target == ADDRESS) begin
-                if (force_io) begin
-                    outport_o[sel_port]  <= force_port;
-                    inport_o[force_port] <= sel_port;
-                end else begin
-                    outport_o[sel_port] <= HERMES_LOCAL;
-                    inport_o[NPORT - 1] <= sel_port;
-                end
+            if (force_io) begin
+                outport_o[sel_port]  <= force_port;
+                inport_o[force_port] <= sel_port;
             end else begin
                 outport_o[sel_port] <= dirs[dim];
                 inport_o[dirs[dim]] <= sel_port;
