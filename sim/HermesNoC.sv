@@ -17,13 +17,13 @@ module HermesNoC
     output  logic [      FLIT_SIZE - 1 : 0] data_o [X_SIZE * Y_SIZE - 1:0]
 );
 
-    logic                     rx            [(NPORT - 1):0][X_SIZE * Y_SIZE - 1:0];
-    logic                     credit_i_sig  [(NPORT - 1):0][X_SIZE * Y_SIZE - 1:0];
-    logic [(FLIT_SIZE - 1):0] data_i_sig    [(NPORT - 1):0][X_SIZE * Y_SIZE - 1:0];
+    logic                     rx            [X_SIZE * Y_SIZE - 1:0][(NPORT - 1):0];
+    logic                     credit_i_sig  [X_SIZE * Y_SIZE - 1:0][(NPORT - 1):0];
+    logic [(FLIT_SIZE - 1):0] data_i_sig    [X_SIZE * Y_SIZE - 1:0][(NPORT - 1):0];
 
-    logic                     tx            [(NPORT - 1):0][X_SIZE * Y_SIZE - 1:0];
-    logic                     credit_o_sig  [(NPORT - 1):0][X_SIZE * Y_SIZE - 1:0];
-    logic [(FLIT_SIZE - 1):0] data_o_sig    [(NPORT - 1):0][X_SIZE * Y_SIZE - 1:0];
+    logic                     tx            [X_SIZE * Y_SIZE - 1:0][(NPORT - 1):0];
+    logic                     credit_o_sig  [X_SIZE * Y_SIZE - 1:0][(NPORT - 1):0];
+    logic [(FLIT_SIZE - 1):0] data_o_sig    [X_SIZE * Y_SIZE - 1:0][(NPORT - 1):0];
 
 
     genvar gen_x, gen_y;
@@ -46,13 +46,67 @@ module HermesNoC
                     .credit_o (credit_o_sig[index]),
                     .data_o   (  data_o_sig[index])
                 );
-
-                assign rx[HERMES_LOCAL][index]           = rx_i[index];
-                assign credit_i_sig[HERMES_LOCAL][index] = credit_i[index];
-                assign data_i_sig[HERMES_LOCAL][index]   = data_i[index];
-                assign tx_o[index]                       = tx[HERMES_LOCAL][index];
             end
         end
     endgenerate
+
+    always_comb begin
+        for (int x = 0; x < X_SIZE; x++) begin
+            for (int y = 0; y < Y_SIZE; y++) begin
+                automatic int index = y*X_SIZE + x;
+
+                rx[index][HERMES_LOCAL]           = rx_i[index];
+                credit_i_sig[index][HERMES_LOCAL] = credit_i[index];
+                data_i_sig[index][HERMES_LOCAL]   = data_i[index];
+                tx_o[index]                       = tx[index][HERMES_LOCAL];
+                credit_o[index]                   = credit_o_sig[index][HERMES_LOCAL];
+                data_o[index]                     = data_o_sig[index][HERMES_LOCAL];
+                
+                if (x != X_SIZE - 1) begin
+                    rx[index][HERMES_EAST]           = tx[index + 1][HERMES_WEST];
+                    credit_i_sig[index][HERMES_EAST] = credit_o_sig[index + 1][HERMES_WEST];
+                    data_i_sig[index][HERMES_EAST]   = data_o_sig[index + 1][HERMES_WEST];
+                end
+                else begin
+                    rx[index][HERMES_EAST]           = 1'b0;
+                    credit_i_sig[index][HERMES_EAST] = 1'b0;
+                    data_i_sig[index][HERMES_EAST]   = '0;
+                end
+
+                if (x != 0) begin
+                    rx[index][HERMES_WEST]           = tx[index - 1][HERMES_EAST];
+                    credit_i_sig[index][HERMES_WEST] = credit_o_sig[index - 1][HERMES_EAST];
+                    data_i_sig[index][HERMES_WEST]   = data_o_sig[index - 1][HERMES_EAST];
+                end
+                else begin
+                    rx[index][HERMES_WEST]           = 1'b0;
+                    credit_i_sig[index][HERMES_WEST] = 1'b0;
+                    data_i_sig[index][HERMES_WEST]   = '0;
+                end
+
+                if (y != Y_SIZE - 1) begin
+                    rx[index][HERMES_NORTH]           = tx[index + X_SIZE][HERMES_SOUTH];
+                    credit_i_sig[index][HERMES_NORTH] = credit_o_sig[index + X_SIZE][HERMES_SOUTH];
+                    data_i_sig[index][HERMES_NORTH]   = data_o_sig[index + X_SIZE][HERMES_SOUTH];
+                end
+                else begin
+                    rx[index][HERMES_NORTH]           = 1'b0;
+                    credit_i_sig[index][HERMES_NORTH] = 1'b0;
+                    data_i_sig[index][HERMES_NORTH]   = '0;
+                end
+
+                if (y != 0) begin
+                    rx[index][HERMES_SOUTH]           = tx[index - X_SIZE][HERMES_NORTH];
+                    credit_i_sig[index][HERMES_SOUTH] = credit_o_sig[index - X_SIZE][HERMES_NORTH];
+                    data_i_sig[index][HERMES_SOUTH]   = data_o_sig[index - X_SIZE][HERMES_NORTH];
+                end
+                else begin
+                    rx[index][HERMES_SOUTH]           = 1'b0;
+                    credit_i_sig[index][HERMES_SOUTH] = 1'b0;
+                    data_i_sig[index][HERMES_SOUTH]   = '0;
+                end
+            end
+        end
+    end
 
 endmodule
