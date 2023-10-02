@@ -17,7 +17,7 @@ module HermesCrossbar
     parameter FLIT_SIZE = 32
 )
 (
-    input  logic                         req_i     [(NPORT - 1):0],
+    input  logic                         data_av_i [(NPORT - 1):0],
     input  logic                         credit_i  [(NPORT - 1):0],
     input  logic                         free_i    [(NPORT - 1):0],
     input  hermes_port_t                 inport_i  [(NPORT - 1):0],
@@ -31,9 +31,9 @@ module HermesCrossbar
 
 	always_comb begin
         for (int i = 0; i < NPORT; i++) begin
-            ack_o[i] = req_i[i] ? credit_i[inport_i[i]] : 1'b0;
+            ack_o[i] = data_av_i[i] ? credit_i[inport_i[i]] : 1'b0;
             if (!free_i[i]) begin
-                tx_o[i]   = req_i[outport_i[i]];
+                tx_o[i]   = data_av_i[outport_i[i]];
                 data_o[i] = data_i[outport_i[i]];
             end
             else begin
