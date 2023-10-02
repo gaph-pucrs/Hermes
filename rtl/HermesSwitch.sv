@@ -110,7 +110,7 @@ module HermesSwitch
     end
 
     /* Routing control */
-    localparam logic [7:0] ADDRS [1:0] = {ADDRESS[15:8], ADDRESS[7:0]};
+    localparam logic [7:0] ADDRS [1:0] = {ADDRESS[7:0], ADDRESS[15:8]};
 
     logic [15:0] target;
     assign target = data_i[sel_port][15:0];
@@ -174,7 +174,7 @@ module HermesSwitch
                 inport_o[i]  <= HERMES_EAST;
             end
         end
-        else if (state == RT_MUX) begin
+        else if (state == RT_SWITCH) begin
             if (target == ADDRESS) begin
                 if (force_io) begin
                     outport_o[sel_port]  <= force_port;
