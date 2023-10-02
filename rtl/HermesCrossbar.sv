@@ -31,10 +31,10 @@ module HermesCrossbar
 
 	always_comb begin
         for (int i = 0; i < NPORT; i++) begin
-            ack_o[i] = data_av_i[i] ? credit_i[inport_i[i]] : 1'b0;
+            ack_o[i] = data_av_i[i] ? credit_i[outport_i[i]] : 1'b0;
             if (!free_i[i]) begin
-                tx_o[i]   = data_av_i[outport_i[i]];
-                data_o[i] = data_i[outport_i[i]];
+                tx_o[i]   = data_av_i[inport_i[i]];
+                data_o[i] = data_i[inport_i[i]];
             end
             else begin
                 tx_o[i]   = 1'b0;
