@@ -57,44 +57,57 @@ module HermesBuffer
     assign next_head = head + 1'b1;
     assign next_tail = tail + 1'b1;
 
+    logic can_receive;
+    assign can_receive = rx_i && !full;
+
+    logic can_send;
+    assign can_send = data_ack_i && !empty;
+
+    /* Buffer write control */
+    always_ff @(posedge clk_i or negedge rst_ni) begin
+        if (rst_ni)
+            if (can_receive)
+                buffer[head] <= data_i;
+    end
+
+    /* Head control */
+    always_ff @(posedge clk_i or negedge rst_ni) begin
+        if (!rst_ni)
+            head <= '0;
+        else
+            if (can_receive)
+                head <= next_head;
+    end
+
+    /* Tail control */
+    always_ff @(posedge clk_i or negedge rst_ni) begin
+        if (!rst_ni)
+            tail <= '0;
+        else
+            if (can_send)
+                tail <= next_tail;
+    end
+
     /* Input control: sets full when next_head == tail on an insertion */
     /* Output control: sets empty when next_tail == head on a removal */
     always_ff @(posedge clk_i or negedge rst_ni) begin
         if (!rst_ni) begin
             full  <= 1'b0;
             empty <= 1'b1;
-            head  <= '0;
-            tail  <= '0;
         end
         else begin
-            /* Write */
-            if (rx_i && (!full || data_ack_i)) begin
-                buffer[head] <= data_i;
-                head <= next_head;
+            if (can_receive) begin
+                if (!can_send)
+                    full <= next_head == tail;
+
                 empty <= 1'b0;
-                if (next_head == tail && !(data_ack_i && !empty))
-                    full <= 1'b1;
             end
 
-            /* Read */
-            if (data_ack_i && !empty) begin
-                tail <= next_tail;
+            if (can_send) begin
+                if (!can_receive)
+                    empty <= next_tail == head;
+
                 full <= 1'b0;
-                if (next_tail == head && !(rx_i && !full))
-                    empty <= 1'b1;
-            end
-        end
-    end
-
-    always_ff @(posedge clk_i or negedge rst_ni) begin
-        if (!rst_ni) begin
-            empty  <= 1'b1;
-        end
-        else begin
-            if (!empty) begin
-            end
-            else if(head != tail) begin
-                empty <= 1'b0;
             end
         end
     end
@@ -130,7 +143,7 @@ module HermesBuffer
             case (state)
                 SEND_PAYLOAD: begin
                     if (data_ack_i)
-                        flit_cntr <= flit_cntr - 1'b1;
+                        flit_cntr <= flit_cntr;
                 end
                 SEND_SIZE:    flit_cntr <= buffer[tail] - 1'b1;
                 default:      flit_cntr <= '0;
