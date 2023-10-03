@@ -1,3 +1,5 @@
+#! /bin/env python3
+
 import random as rm
 import math
 
