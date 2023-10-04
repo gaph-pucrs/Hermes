@@ -175,7 +175,7 @@ module HermesSwitch
                 inport_o[i]  <= HERMES_EAST;
             end
         end
-        else if (state == RT_SWITCH) begin
+        else if (state == RT_MUX) begin
             if (force_io) begin
                 outport_o[sel_port]  <= force_port;
                 inport_o[force_port] <= sel_port;
