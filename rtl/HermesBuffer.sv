@@ -61,7 +61,7 @@ module HermesBuffer
     assign can_receive = rx_i && !full;
 
     logic can_send;
-    assign can_send = data_ack_i && !empty;
+    assign can_send = sending_o && data_ack_i && !empty;
 
     /* Buffer write control */
     always_ff @(posedge clk_i or negedge rst_ni) begin
@@ -141,11 +141,11 @@ module HermesBuffer
         end
         else begin
             case (state)
+                SEND_SIZE:    flit_cntr <= buffer[tail];
                 SEND_PAYLOAD: begin
-                    if (data_ack_i)
-                        flit_cntr <= flit_cntr;
+                    if (data_ack_i && !empty)
+                        flit_cntr <= flit_cntr - 1'b1;
                 end
-                SEND_SIZE:    flit_cntr <= buffer[tail] - 1'b1;
                 default:      flit_cntr <= '0;
             endcase
         end
@@ -158,7 +158,7 @@ module HermesBuffer
             SEND_REQ:     next_state = req_ack_i  ? SEND_HEADER  : SEND_REQ;
             SEND_HEADER:  next_state = data_ack_i ? SEND_SIZE    : SEND_HEADER;
             SEND_SIZE:    next_state = data_ack_i ? SEND_PAYLOAD : SEND_SIZE;
-            SEND_PAYLOAD: next_state = (data_ack_i && flit_cntr == '0)
+            SEND_PAYLOAD: next_state = (data_ack_i && !empty && flit_cntr == 1'b1)
                                                                 ? SEND_END
                                                                 : SEND_PAYLOAD;
             SEND_END:     next_state = SEND_END2;
