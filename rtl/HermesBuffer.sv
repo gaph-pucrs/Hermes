@@ -113,14 +113,12 @@ module HermesBuffer
     end
 
     /* FSM Control */
-    typedef enum logic [6:0] {
-        SEND_INIT    = 7'b0000001,
-        SEND_REQ     = 7'b0000010,
-        SEND_HEADER  = 7'b0000100,
-        SEND_SIZE    = 7'b0001000,
-        SEND_PAYLOAD = 7'b0010000,
-        SEND_END     = 7'b0100000,
-        SEND_END2    = 7'b1000000
+    typedef enum logic [4:0] {
+        SEND_INIT    = 5'b0000001,
+        SEND_REQ     = 5'b0000010,
+        SEND_HEADER  = 5'b0000100,
+        SEND_SIZE    = 5'b0001000,
+        SEND_PAYLOAD = 5'b0010000
     } fsm_t;
 
     fsm_t state;
@@ -159,10 +157,8 @@ module HermesBuffer
             SEND_HEADER:  next_state = data_ack_i ? SEND_SIZE    : SEND_HEADER;
             SEND_SIZE:    next_state = data_ack_i ? SEND_PAYLOAD : SEND_SIZE;
             SEND_PAYLOAD: next_state = (data_ack_i && !empty && flit_cntr == 1'b1)
-                                                                ? SEND_END
+                                                                ? SEND_INIT
                                                                 : SEND_PAYLOAD;
-            SEND_END:     next_state = SEND_END2;
-            SEND_END2:    next_state = SEND_INIT;
             default:      next_state = SEND_INIT;
         endcase
     end
