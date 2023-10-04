@@ -12,5 +12,5 @@ vlog tb.sv
 
 vsim work.tb -voptargs=+acc
 do wave.do
-run 2 us
+run 50 us
 quit
