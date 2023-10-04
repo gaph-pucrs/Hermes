@@ -83,14 +83,16 @@ module tb #(parameter int X_SIZE = 4,
 
     logic [NUM_ROUTERS-1:0] printed_rx = '1;
     logic [NUM_ROUTERS-1:0] processed_rx = '1;
-    int                     index_rx [NUM_ROUTERS-1:0];
+    int                     index_rx  [NUM_ROUTERS-1:0];
+    int                     pkts_sent [NUM_ROUTERS-1:0];
 
     genvar j;
     for (j = 0; j < NUM_ROUTERS; j++) begin
         always @(posedge clk) begin
             if (rst_n == 1'b0) begin
-                data_in[j]  = '0;
-                rx[j]       = '0;
+                data_in[j]   = '0;
+                rx[j]        = '0;
+                pkts_sent[j] = 0;
             end 
             // Wait for the specified time
             else if (int'($time) <= time_injection[j]) begin
@@ -125,6 +127,7 @@ module tb #(parameter int X_SIZE = 4,
                     else begin
                         processed_rx[j] <= 1;
                         rx[j]           = 0;
+                        pkts_sent[j]    = pkts_sent[j] + 1;
                     end
 
                     index_rx[j] <= index_rx[j] + 1;
@@ -146,30 +149,42 @@ module tb #(parameter int X_SIZE = 4,
     int          index_tx   [NUM_ROUTERS-1:0];
     int          size_tx    [NUM_ROUTERS-1:0];
     logic [15:0] source_tx  [NUM_ROUTERS-1:0];
+    int          pkts_recv  [NUM_ROUTERS-1:0];
 
     genvar k;
     for (k = 0; k < NUM_ROUTERS; k++) begin
         always @(posedge clk) begin
-            if (tx[k] == 1'b1 && credit_i[k] == 1'b1) begin
-                if (index_tx[k] == 0) begin
-                    source_tx[k] <= data_out[k][31:16];
-                end
-                else if (index_tx[k] == 1) begin
-                    size_tx[k] <= int'(data_out[k]);
-                end
-                else if (index_tx[k] == 2) begin
-                    $display("[%0d] - Router %2d - Received Package: source = %4h packet_size = %0d latency = %0d", $time, k, source_tx[k], size_tx[k], int'($time) - int'(data_out[k]));
-                    $fwrite(log_handle[k],"%4h %0d %0d\n", source_tx[k], size_tx[k], int'($time) - int'(data_out[k]));
-                end
-
-                index_tx[k] <= index_tx[k] + 1;
-            end
+            if (rst_n == 1'b0) begin
+                pkts_recv[k] = 0;
+            end 
             else begin
-                index_tx[k] <= 0;
+                automatic int pos_x = k % X_SIZE;
+                automatic int pos_y = k / X_SIZE;
+                
+                if (tx[k] == 1'b1 && credit_i[k] == 1'b1) begin
+                    if (index_tx[k] == 0) begin
+                        source_tx[k] <= data_out[k][31:16];
+                    end
+                    else if (index_tx[k] == 1) begin
+                        size_tx[k] <= int'(data_out[k]);
+                    end
+                    else if (index_tx[k] == 2) begin
+                        $display("[%0d] - Router %2d (%0d, %0d) - Received Package: source = (%2h, %2h) packet_size = %0d latency = %0d", $time, k, pos_x, pos_y, source_tx[k][15:8], source_tx[k][7:0], size_tx[k], int'($time) - int'(data_out[k]));
+                        $fwrite(log_handle[k],"%4h %0d %0d\n", source_tx[k], size_tx[k], int'($time) - int'(data_out[k]));
+                        pkts_recv[k] = pkts_recv[k] + 1;
+                    end
+
+                    index_tx[k] <= index_tx[k] + 1;
+                end
+                else begin
+                    index_tx[k] <= 0;
+                end
             end
         end
     end
 
+    int total_pkts_sent = 0;
+    int total_pkts_recv = 0;
     // Create a final block to close the files
     final begin
         for (int i = 0; i < NUM_ROUTERS; i++) begin
@@ -180,6 +195,12 @@ module tb #(parameter int X_SIZE = 4,
             if (log_handle[i] != 0) begin
                 $fclose(log_handle[i]);
             end
+
+            total_pkts_sent += pkts_sent[i];
+            total_pkts_recv += pkts_recv[i];
         end
+
+        $display("Total Packets Sent:     %02d", total_pkts_sent);
+        $display("Total Packets Received: %02d", total_pkts_recv);
     end
 endmodule
