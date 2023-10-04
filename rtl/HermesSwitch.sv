@@ -162,7 +162,7 @@ module HermesSwitch
 
             for (int i = 0; i < NPORT; i++) begin
                 if (sending_r[i] && !sending_i[i])
-                    free_o[i] <= 1'b1;
+                    free_o[outport_o[i]] <= 1'b1;
             end
         end
     end
