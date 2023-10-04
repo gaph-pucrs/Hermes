@@ -139,7 +139,7 @@ module HermesSwitch
 
     assign dirs[0] = (tgts[0] > ADDRS[0]) ? HERMES_EAST  : HERMES_WEST;
     assign dirs[1] = (tgts[1] > ADDRS[1]) ? HERMES_NORTH : HERMES_SOUTH;
-    assign dirs[2] = HERMES_LOCAL;
+    assign dirs[2] = force_io ? force_port : HERMES_LOCAL;
 
     /* Active port control */
     logic sending_r [(NPORT - 1):0];
@@ -158,7 +158,7 @@ module HermesSwitch
         end
         else begin
             if (state == RT_MUX)
-                free_o[outport_o[sel_port]] <= 1'b0;
+                free_o[dirs[dim]] <= 1'b0;
 
             for (int i = 0; i < NPORT; i++) begin
                 if (sending_r[i] && !sending_i[i])
@@ -176,13 +176,8 @@ module HermesSwitch
             end
         end
         else if (state == RT_MUX) begin
-            if (force_io) begin
-                outport_o[sel_port]  <= force_port;
-                inport_o[force_port] <= sel_port;
-            end else begin
-                outport_o[sel_port] <= dirs[dim];
-                inport_o[dirs[dim]] <= sel_port;
-            end
+            outport_o[sel_port] <= dirs[dim];
+            inport_o[dirs[dim]] <= sel_port;
         end
     end
 
