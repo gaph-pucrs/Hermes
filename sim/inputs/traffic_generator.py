@@ -7,7 +7,7 @@ import math
 size      = 32    # Packet Size
 bandwidth = 32    # Bandwidth
 rate      = 1     # Rate 
-amount    = 1     # Amount of Packets
+amount    = 16     # Amount of Packets
 x_total   = 4     # X Noc Size
 y_total   = 4     # Y Noc Size
 
@@ -27,5 +27,5 @@ for i in range(math.floor(x_total)):
         with open(str(router)+".txt", "w") as output:
             for k in range(amount):
                 x, y = xy()
-                output.write(str(t) + '\t' + str(x) + '\t' +  str(y) + '\t' + str(size))
+                output.write(str(t) + '\t' + str(x) + '\t' +  str(y) + '\t' + str(size) + ('\n' if k != amount - 1 else ''))
                 t += int((bandwidth * size)/ rate)
