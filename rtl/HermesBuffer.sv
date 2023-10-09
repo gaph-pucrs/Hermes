@@ -40,85 +40,26 @@ module HermesBuffer
     output logic [(FLIT_SIZE - 1):0] data_o
 );
 
-    logic full;
-    logic empty;
+    logic tx;
 
-    logic [($clog2(BUFFER_SIZE) - 1):0] head;
-    logic [($clog2(BUFFER_SIZE) - 1):0] tail;
-
-    logic [($clog2(BUFFER_SIZE) - 1):0] next_head;
-    logic [($clog2(BUFFER_SIZE) - 1):0] next_tail;
-
-    logic [(FLIT_SIZE - 1):0] buffer [(BUFFER_SIZE - 1):0];
-
-    assign credit_o = !full;
-    assign data_o   = buffer[tail];
-
-    assign next_head = head + 1'b1;
-    assign next_tail = tail + 1'b1;
-
-    logic can_receive;
-    assign can_receive = rx_i && !full;
-
-    logic can_send;
-    assign can_send = sending_o && data_ack_i && !empty;
-
-    /* Buffer write control */
-    always_ff @(posedge clk_i or negedge rst_ni) begin
-        if (rst_ni)
-            if (can_receive)
-                buffer[head] <= data_i;
-    end
-
-    /* Head control */
-    always_ff @(posedge clk_i or negedge rst_ni) begin
-        if (!rst_ni)
-            head <= '0;
-        else
-            if (can_receive)
-                head <= next_head;
-    end
-
-    /* Tail control */
-    always_ff @(posedge clk_i or negedge rst_ni) begin
-        if (!rst_ni)
-            tail <= '0;
-        else
-            if (can_send)
-                tail <= next_tail;
-    end
-
-    /* Input control: sets full when next_head == tail on an insertion */
-    /* Output control: sets empty when next_tail == head on a removal */
-    always_ff @(posedge clk_i or negedge rst_ni) begin
-        if (!rst_ni) begin
-            full  <= 1'b0;
-            empty <= 1'b1;
-        end
-        else begin
-            if (can_receive) begin
-                if (!can_send)
-                    full <= next_head == tail;
-
-                empty <= 1'b0;
-            end
-
-            if (can_send) begin
-                if (!can_receive)
-                    empty <= next_tail == head;
-
-                full <= 1'b0;
-            end
-        end
-    end
+    RingBuffer ringbuffer (
+        .clk_i      (clk_i),
+        .rst_ni     (rst_ni),
+        .rx_i       (rx_i),
+        .rx_ack_o   (credit_o),
+        .data_i     (data_i),
+        .tx_o       (tx),
+        .tx_ack_i   (data_ack_i),
+        .data_o     (data_o)
+    );
 
     /* FSM Control */
     typedef enum logic [4:0] {
-        SEND_INIT    = 5'b0000001,
-        SEND_REQ     = 5'b0000010,
-        SEND_HEADER  = 5'b0000100,
-        SEND_SIZE    = 5'b0001000,
-        SEND_PAYLOAD = 5'b0010000
+        SEND_INIT    = 5'b00001,
+        SEND_REQ     = 5'b00010,
+        SEND_HEADER  = 5'b00100,
+        SEND_SIZE    = 5'b01000,
+        SEND_PAYLOAD = 5'b10000
     } fsm_t;
 
     fsm_t state;
@@ -139,9 +80,9 @@ module HermesBuffer
         end
         else begin
             case (state)
-                SEND_SIZE:    flit_cntr <= buffer[tail];
+                SEND_SIZE:    flit_cntr <= data_o;
                 SEND_PAYLOAD: begin
-                    if (data_ack_i && !empty)
+                    if (data_ack_i && tx)
                         flit_cntr <= flit_cntr - 1'b1;
                 end
                 default:      flit_cntr <= '0;
@@ -149,17 +90,16 @@ module HermesBuffer
         end
     end
 
-
     always_comb begin
         case (state)
-            SEND_INIT:    next_state = !empty     ? SEND_REQ     : SEND_INIT;
+            SEND_INIT:    next_state = tx         ? SEND_REQ     : SEND_INIT;
             SEND_REQ:     next_state = req_ack_i  ? SEND_HEADER  : SEND_REQ;
             SEND_HEADER:  next_state = data_ack_i ? SEND_SIZE    : SEND_HEADER;
             SEND_SIZE:    next_state = data_ack_i ? SEND_PAYLOAD : SEND_SIZE;
-            SEND_PAYLOAD: next_state = (data_ack_i && !empty && flit_cntr == 1'b1)
-                                                                ? SEND_INIT
-                                                                : SEND_PAYLOAD;
-            default:      next_state = SEND_INIT;
+            SEND_PAYLOAD: next_state = (data_ack_i && tx && flit_cntr == 1'b1)
+                                                                 ? SEND_INIT
+                                                                 : SEND_PAYLOAD;
+            default:      next_state =                             SEND_INIT;
         endcase
     end
 
@@ -168,9 +108,12 @@ module HermesBuffer
     assign req_o = (state == SEND_REQ);
 
     /* Active */
-    assign sending_o = (state inside {SEND_HEADER, SEND_SIZE, SEND_PAYLOAD});
+    logic sending;
+    assign sending = (state inside {SEND_HEADER, SEND_SIZE, SEND_PAYLOAD});
 
     /* Data request control */
-    assign data_av_o = (state inside {SEND_HEADER, SEND_SIZE, SEND_PAYLOAD} && !empty);
+    assign data_av_o = (state inside {SEND_HEADER, SEND_SIZE, SEND_PAYLOAD} && tx);
+
+    assign sending_o = sending & tx;
 
 endmodule
