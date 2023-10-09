@@ -1,0 +1,3 @@
+[submodule "rtl/RingBuffer"]
+	path = rtl/RingBuffer
+	url = https://github.com/gaph-pucrs/RingBuffer.git
