@@ -22,25 +22,25 @@ module HermesRouter
     input  logic clk_i,
     input  logic rst_ni,
 
-    input  logic                     rx_i     [(NPORT - 1):0],
-    input  logic                     credit_i [(NPORT - 1):0],
-    input  logic [(FLIT_SIZE - 1):0] data_i   [(NPORT - 1):0],
+    input  logic                     rx_i     [(HERMES_NPORT - 1):0],
+    input  logic                     credit_i [(HERMES_NPORT - 1):0],
+    input  logic [(FLIT_SIZE - 1):0] data_i   [(HERMES_NPORT - 1):0],
 
-    output logic                     tx_o     [(NPORT - 1):0],
-    output logic                     credit_o [(NPORT - 1):0],
-    output logic [(FLIT_SIZE - 1):0] data_o   [(NPORT - 1):0]
+    output logic                     tx_o     [(HERMES_NPORT - 1):0],
+    output logic                     credit_o [(HERMES_NPORT - 1):0],
+    output logic [(FLIT_SIZE - 1):0] data_o   [(HERMES_NPORT - 1):0]
 );
 
-    logic                     req      [(NPORT - 1):0];
-    logic                     data_av  [(NPORT - 1):0];
-    logic                     sending  [(NPORT - 1):0];
-    logic                     req_ack  [(NPORT - 1):0];
-    logic                     data_ack [(NPORT - 1):0];
-    logic [(FLIT_SIZE - 1):0] data     [(NPORT - 1):0];
+    logic                     req      [(HERMES_NPORT - 1):0];
+    logic                     data_av  [(HERMES_NPORT - 1):0];
+    logic                     sending  [(HERMES_NPORT - 1):0];
+    logic                     req_ack  [(HERMES_NPORT - 1):0];
+    logic                     data_ack [(HERMES_NPORT - 1):0];
+    logic [(FLIT_SIZE - 1):0] data     [(HERMES_NPORT - 1):0];
 
     genvar port;
     generate
-        for (port = 0; port < NPORT; port++) begin
+        for (port = 0; port < HERMES_NPORT; port++) begin
             HermesBuffer #(
                 .BUFFER_SIZE(BUFFER_SIZE),
                 .FLIT_SIZE  (FLIT_SIZE)
@@ -62,9 +62,9 @@ module HermesRouter
         end
     endgenerate;
 
-    logic         free    [(NPORT - 1):0];
-    hermes_port_t inport  [(NPORT - 1):0];
-    hermes_port_t outport [(NPORT - 1):0];
+    logic         free    [(HERMES_NPORT - 1):0];
+    hermes_port_t inport  [(HERMES_NPORT - 1):0];
+    hermes_port_t outport [(HERMES_NPORT - 1):0];
 
     HermesCrossbar #(
         .FLIT_SIZE(FLIT_SIZE)

@@ -21,14 +21,14 @@ module HermesSwitch
     input  logic clk_i,
     input  logic rst_ni,
 
-    input  logic                     req_i     [(NPORT - 1):0],
-    input  logic                     sending_i [(NPORT - 1):0],
-    input  logic [(FLIT_SIZE - 1):0] data_i    [(NPORT - 1):0],
+    input  logic                     req_i     [(HERMES_NPORT - 1):0],
+    input  logic                     sending_i [(HERMES_NPORT - 1):0],
+    input  logic [(FLIT_SIZE - 1):0] data_i    [(HERMES_NPORT - 1):0],
 
-    output logic                     ack_o     [(NPORT - 1):0],
-    output logic                     free_o    [(NPORT - 1):0],
-    output hermes_port_t             inport_o  [(NPORT - 1):0],
-    output hermes_port_t             outport_o [(NPORT - 1):0]
+    output logic                     ack_o     [(HERMES_NPORT - 1):0],
+    output logic                     free_o    [(HERMES_NPORT - 1):0],
+    output hermes_port_t             inport_o  [(HERMES_NPORT - 1):0],
+    output hermes_port_t             outport_o [(HERMES_NPORT - 1):0]
 );
 
     hermes_port_t                   dirs [2:0];
@@ -57,7 +57,7 @@ module HermesSwitch
     logic has_req;
     always_comb begin
         has_req = 1'b0;
-        for (int i = 0; i < NPORT; i++)
+        for (int i = 0; i < HERMES_NPORT; i++)
             has_req |= req_i[i];
     end
 
@@ -81,7 +81,7 @@ module HermesSwitch
     always_comb begin
         /* From sel_port until the last port */
         next_port = sel_port;
-        for(int i = 0; i < NPORT; i++) begin
+        for(int i = 0; i < HERMES_NPORT; i++) begin
             if (i <= sel_port) 
                 continue;
 
@@ -93,7 +93,7 @@ module HermesSwitch
         
         /* If not found, start again from 0 until sel_port */
         if (next_port == sel_port) begin
-            for(int i = 0; i < NPORT; i++) begin
+            for(int i = 0; i < HERMES_NPORT; i++) begin
                 if (req_i[i]) begin
                     next_port = hermes_port_t'(i);
                     break;
@@ -124,7 +124,7 @@ module HermesSwitch
     assign force_io = data_i[sel_port][FLIT_SIZE - 1];
 
     hermes_port_t force_port;
-    assign force_port = hermes_port_t'(data_i[sel_port][(FLIT_SIZE - 2):(FLIT_SIZE - $clog2(NPORT) - 1)]);
+    assign force_port = hermes_port_t'(data_i[sel_port][(FLIT_SIZE - 2):(FLIT_SIZE - $clog2(HERMES_NPORT) - 1)]);
 
     /* Decide which dimension (x,y, or local) routing will take */
     always_comb begin
@@ -142,10 +142,10 @@ module HermesSwitch
     assign dirs[2] = force_io ? force_port : HERMES_LOCAL;
 
     /* Active port control */
-    logic sending_r [(NPORT - 1):0];
+    logic sending_r [(HERMES_NPORT - 1):0];
     always_ff @(posedge clk_i or negedge rst_ni) begin
         if (!rst_ni)
-            for (int i = 0; i < NPORT; i++)
+            for (int i = 0; i < HERMES_NPORT; i++)
                 sending_r[i] <= '0;
         else
             sending_r <= sending_i;
@@ -153,14 +153,14 @@ module HermesSwitch
 
     always_ff @(posedge clk_i or negedge rst_ni) begin
         if (!rst_ni) begin
-            for (int i = 0; i < NPORT; i++)
+            for (int i = 0; i < HERMES_NPORT; i++)
                 free_o[i] <= 1'b1;
         end
         else begin
             if (state == RT_MUX)
                 free_o[dirs[dim]] <= 1'b0;
 
-            for (int i = 0; i < NPORT; i++) begin
+            for (int i = 0; i < HERMES_NPORT; i++) begin
                 if (sending_r[i] && !sending_i[i])
                     free_o[outport_o[i]] <= 1'b1;
             end
@@ -170,7 +170,7 @@ module HermesSwitch
     /* Mux control */
     always_ff @(posedge clk_i or negedge rst_ni) begin
         if (!rst_ni) begin
-            for (int i = 0; i < NPORT; i++) begin
+            for (int i = 0; i < HERMES_NPORT; i++) begin
                 outport_o[i] <= HERMES_EAST;
                 inport_o[i]  <= HERMES_EAST;
             end
@@ -183,7 +183,7 @@ module HermesSwitch
 
     /* Acknowledge control */
     always_comb begin
-        for (int i = 0; i < NPORT; i++)
+        for (int i = 0; i < HERMES_NPORT; i++)
             ack_o[i] = 1'b0;
 
         ack_o[sel_port] = (state == RT_ACK) ? 1'b1 : 1'b0;

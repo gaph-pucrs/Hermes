@@ -13,8 +13,8 @@
 
 package HermesPkg;
 
-    localparam NPORT = 5;
-    typedef enum logic [$clog2(NPORT) - 1 : 0] {
+    parameter HERMES_NPORT = 5;
+    typedef enum logic [$clog2(HERMES_NPORT) - 1 : 0] {
 		HERMES_EAST,
 		HERMES_WEST,
 		HERMES_NORTH,
