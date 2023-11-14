@@ -124,7 +124,7 @@ module HermesSwitch
     assign force_io = data_i[sel_port][FLIT_SIZE - 1];
 
     hermes_port_t force_port;
-    assign force_port = hermes_port_t'(data_i[sel_port][(FLIT_SIZE - 2):(FLIT_SIZE - $clog2(HERMES_NPORT) - 1)]);
+    assign force_port = hermes_port_t'({1'b0, data_i[sel_port][(FLIT_SIZE - 2):(FLIT_SIZE - $clog2(HERMES_NPORT))]});
 
     /* Decide which dimension (x,y, or local) routing will take */
     always_comb begin
