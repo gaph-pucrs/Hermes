@@ -42,7 +42,10 @@ module HermesBuffer
 
     logic tx;
 
-    RingBuffer ringbuffer (
+    RingBuffer #(
+        .DATA_SIZE(32),
+        .BUFFER_SIZE(BUFFER_SIZE)
+    ) ringbuffer (
         .clk_i      (clk_i),
         .rst_ni     (rst_ni),
         .rx_i       (rx_i),
@@ -96,7 +99,7 @@ module HermesBuffer
             SEND_REQ:     next_state = req_ack_i  ? SEND_HEADER  : SEND_REQ;
             SEND_HEADER:  next_state = data_ack_i ? SEND_SIZE    : SEND_HEADER;
             SEND_SIZE:    next_state = data_ack_i ? SEND_PAYLOAD : SEND_SIZE;
-            SEND_PAYLOAD: next_state = (data_ack_i && tx && flit_cntr == 1'b1)
+            SEND_PAYLOAD: next_state = (data_ack_i && tx && flit_cntr == 32'b1)
                                                                  ? SEND_INIT
                                                                  : SEND_PAYLOAD;
             default:      next_state =                             SEND_INIT;
