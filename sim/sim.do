@@ -2,7 +2,7 @@ vlib work
 vmap work work
 
 vlog ../rtl/HermesPkg.sv
-vlog ../rtl/RingBuffer/rtl/RingBuffer.sv
+vlog ../RingBuffer/rtl/RingBuffer.sv
 vlog ../rtl/HermesBuffer.sv
 vlog ../rtl/HermesCrossbar.sv
 vlog ../rtl/HermesSwitch.sv

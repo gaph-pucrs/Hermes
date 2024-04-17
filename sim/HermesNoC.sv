@@ -1,3 +1,5 @@
+`include "../rtl/HermesPkg.sv"
+
 module HermesNoC
     import HermesPkg::*;
 #(
@@ -17,13 +19,13 @@ module HermesNoC
     output  logic [      FLIT_SIZE - 1 : 0] data_o [X_SIZE * Y_SIZE - 1:0]
 );
 
-    logic                     rx            [X_SIZE * Y_SIZE - 1:0][(NPORT - 1):0];
-    logic                     credit_i_sig  [X_SIZE * Y_SIZE - 1:0][(NPORT - 1):0];
-    logic [(FLIT_SIZE - 1):0] data_i_sig    [X_SIZE * Y_SIZE - 1:0][(NPORT - 1):0];
+    logic                     rx            [X_SIZE * Y_SIZE - 1:0][(HERMES_NPORT - 1):0];
+    logic                     credit_i_sig  [X_SIZE * Y_SIZE - 1:0][(HERMES_NPORT - 1):0];
+    logic [(FLIT_SIZE - 1):0] data_i_sig    [X_SIZE * Y_SIZE - 1:0][(HERMES_NPORT - 1):0];
 
-    logic                     tx            [X_SIZE * Y_SIZE - 1:0][(NPORT - 1):0];
-    logic                     credit_o_sig  [X_SIZE * Y_SIZE - 1:0][(NPORT - 1):0];
-    logic [(FLIT_SIZE - 1):0] data_o_sig    [X_SIZE * Y_SIZE - 1:0][(NPORT - 1):0];
+    logic                     tx            [X_SIZE * Y_SIZE - 1:0][(HERMES_NPORT - 1):0];
+    logic                     credit_o_sig  [X_SIZE * Y_SIZE - 1:0][(HERMES_NPORT - 1):0];
+    logic [(FLIT_SIZE - 1):0] data_o_sig    [X_SIZE * Y_SIZE - 1:0][(HERMES_NPORT - 1):0];
 
 
     genvar gen_x, gen_y;
