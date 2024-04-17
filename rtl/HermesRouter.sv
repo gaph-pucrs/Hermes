@@ -11,6 +11,8 @@
  * @brief SystemVerilog Hermes router module (router top).
  */
 
+`include "HermesPkg.sv"
+
 module HermesRouter
     import HermesPkg::*;
 #(

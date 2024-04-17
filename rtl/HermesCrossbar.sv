@@ -11,6 +11,8 @@
  * @brief SystemVerilog Hermes crossbar module.
  */
 
+`include "HermesPkg.sv"
+
 module HermesCrossbar
     import HermesPkg::*;
 #(

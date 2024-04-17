@@ -11,6 +11,9 @@
  * @brief SystemVerilog Hermes package.
  */
 
+`ifndef HERMES_PKG
+`define HERMES_PKG
+
 package HermesPkg;
 
     parameter HERMES_NPORT = 5;
@@ -23,3 +26,5 @@ package HermesPkg;
     } hermes_port_t;
 
 endpackage
+
+`endif

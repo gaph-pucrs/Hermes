@@ -11,6 +11,8 @@
  * @brief SystemVerilog Hermes switch module.
  */
 
+`include "HermesPkg.sv"
+
 module HermesSwitch
     import HermesPkg::*;
 #(
