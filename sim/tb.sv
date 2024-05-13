@@ -1,3 +1,16 @@
+/**
+ * Hermes
+ * @file tb.sv
+ *
+ * @author Willian Analdo Nunes (willian.nunes@edu.pucrs.br)
+ * GAPH - Hardware Design Support Group (https://corfu.pucrs.br)
+ * PUCRS - Pontifical Catholic University of Rio Grande do Sul (http://pucrs.br/)
+ *
+ * @date October 2023
+ *
+ * @brief Testbench for Hermes
+ */
+
 module tb #(parameter int X_SIZE = 4,
             parameter int Y_SIZE = 4) ();
 
