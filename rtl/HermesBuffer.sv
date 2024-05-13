@@ -111,12 +111,9 @@ module HermesBuffer
     assign req_o = (state == SEND_REQ);
 
     /* Active */
-    logic sending;
-    assign sending = (state inside {SEND_HEADER, SEND_SIZE, SEND_PAYLOAD});
+    assign sending_o = (state inside {SEND_HEADER, SEND_SIZE, SEND_PAYLOAD});
 
     /* Data request control */
     assign data_av_o = (state inside {SEND_HEADER, SEND_SIZE, SEND_PAYLOAD} && tx);
-
-    assign sending_o = sending & tx;
 
 endmodule
