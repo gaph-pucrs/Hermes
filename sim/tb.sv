@@ -30,8 +30,10 @@ module tb #(parameter int X_SIZE = 4,
     logic                   rst_n;
     logic                   clk = '0;
     logic [NUM_ROUTERS-1:0] rx = '0;
+    logic [NUM_ROUTERS-1:0] rx_eop = '0;
     logic [NUM_ROUTERS-1:0] credit_o;
     logic [NUM_ROUTERS-1:0] tx;
+    logic [NUM_ROUTERS-1:0] tx_eop;
     logic [NUM_ROUTERS-1:0] credit_i;
     logic [31:0]            data_in  [NUM_ROUTERS-1:0];
     logic [31:0]            data_out [NUM_ROUTERS-1:0];
@@ -54,9 +56,11 @@ module tb #(parameter int X_SIZE = 4,
             .clk_i          (clk),
             .rst_ni         (rst_n),
             .rx_i           (rx),
+            .eop_i          (rx_eop),
             .data_i         (data_in),
             .credit_i       (credit_i),
             .tx_o           (tx),
+            .eop_o          (tx_eop),
             .data_o         (data_out),
             .credit_o       (credit_o)
     );
@@ -105,6 +109,7 @@ module tb #(parameter int X_SIZE = 4,
             if (rst_n == 1'b0) begin
                 data_in[j]   = '0;
                 rx[j]        = '0;
+                rx_eop[j]    = '0;
                 pkts_sent[j] = 0;
             end 
             // Wait for the specified time
@@ -122,6 +127,7 @@ module tb #(parameter int X_SIZE = 4,
 
                         data_in[j]  = {pos_x[7:0], pos_y[7:0], target_x[j][7:0], target_y[j][7:0]};
                         rx[j]       = 1;
+                        rx_eop[j]   = '0;
                         $display("[%0d] - Router %2d: SENDING PACKET %d -> Size %0d -> from (%0d, %0d) to (%0d, %0d)", $time, j, (j * 100_000) + time_injection[j], packet_size[j], pos_x, pos_y, target_x[j], target_y[j]);
                     end
                     else if (index_rx[j] == 1) begin
@@ -134,12 +140,17 @@ module tb #(parameter int X_SIZE = 4,
                         automatic logic[31:0] packetNumber = {(j * 100_000) + time_injection[j]};
                         data_in[j]  = packetNumber;
                     end
-                    else if (index_rx[j] < packet_size[j] + 2) begin
+                    else if (index_rx[j] <= packet_size[j]) begin
                         data_in[j]  = {index_rx[j] - 1};
+                    end
+                    else if (index_rx[j] == packet_size[j] + 1) begin
+                        data_in[j]  = {index_rx[j] - 1};
+                        rx_eop      = 1'b1;
                     end
                     else begin
                         processed_rx[j] <= 1;
                         rx[j]           = 0;
+                        rx_eop          = 1'b0;
                         pkts_sent[j]    = pkts_sent[j] + 1;
                     end
 

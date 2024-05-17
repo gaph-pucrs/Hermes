@@ -16,50 +16,57 @@
 module HermesRouter
     import HermesPkg::*;
 #(
-    parameter logic [15:0] ADDRESS = 0,
-    parameter              BUFFER_SIZE = 8,
-    parameter              FLIT_SIZE = 32 /* Minimum: 20 */
+    parameter logic [15:0] ADDRESS     = 0,
+    parameter              BUFFER_SIZE = 8, /* Power of 2  */
+    parameter              FLIT_SIZE   = 32 /* Minimum: 20 */
 )
 (
     input  logic clk_i,
     input  logic rst_ni,
 
     input  logic                     rx_i     [(HERMES_NPORT - 1):0],
-    input  logic                     credit_i [(HERMES_NPORT - 1):0],
+    input  logic                     eop_i    [(HERMES_NPORT - 1):0],
+    output logic                     credit_o [(HERMES_NPORT - 1):0],
     input  logic [(FLIT_SIZE - 1):0] data_i   [(HERMES_NPORT - 1):0],
 
     output logic                     tx_o     [(HERMES_NPORT - 1):0],
-    output logic                     credit_o [(HERMES_NPORT - 1):0],
+    output logic                     eop_o    [(HERMES_NPORT - 1):0],
+    input  logic                     credit_i [(HERMES_NPORT - 1):0],
     output logic [(FLIT_SIZE - 1):0] data_o   [(HERMES_NPORT - 1):0]
 );
 
-    logic                     req      [(HERMES_NPORT - 1):0];
+    
     logic                     data_av  [(HERMES_NPORT - 1):0];
-    logic                     sending  [(HERMES_NPORT - 1):0];
-    logic                     req_ack  [(HERMES_NPORT - 1):0];
+    logic                     eop      [(HERMES_NPORT - 1):0];
     logic                     data_ack [(HERMES_NPORT - 1):0];
     logic [(FLIT_SIZE - 1):0] data     [(HERMES_NPORT - 1):0];
+    
+    logic                     req      [(HERMES_NPORT - 1):0];
+    logic                     req_ack  [(HERMES_NPORT - 1):0];
+    logic                     sending  [(HERMES_NPORT - 1):0];
 
     genvar port;
     generate
         for (port = 0; port < HERMES_NPORT; port++) begin
             HermesBuffer #(
                 .BUFFER_SIZE(BUFFER_SIZE),
-                .FLIT_SIZE  (FLIT_SIZE)
+                .FLIT_SIZE  (FLIT_SIZE  )
             )
             buffer
             (
                 .clk_i      (   clk_i      ),
                 .rst_ni     (  rst_ni      ),
                 .rx_i       (    rx_i[port]),
-                .req_ack_i  ( req_ack[port]),
-                .data_ack_i (data_ack[port]),
-                .data_i     (  data_i[port]),
-                .req_o      (     req[port]),
+                .eop_i      (   eop_i[port]),
                 .credit_o   (credit_o[port]),
+                .data_i     (  data_i[port]),
                 .data_av_o  ( data_av[port]),
-                .sending_o  ( sending[port]),
-                .data_o     (    data[port])
+                .eop_o      (     eop[port]),
+                .data_ack_i (data_ack[port]),
+                .data_o     (    data[port]),
+                .req_o      (     req[port]),
+                .req_ack_i  ( req_ack[port]),
+                .sending_o  ( sending[port])
             );
         end
     endgenerate;
@@ -74,14 +81,16 @@ module HermesRouter
     crossbar
     (
         .data_av_i ( data_av),
-        .credit_i  (credit_i),
-        .free_i    (    free),
-        .inport_i  (  inport),
-        .outport_i ( outport),
+        .eop_i     (     eop),
+        .ack_o     (data_ack),
         .data_i    (    data),
         .tx_o      (    tx_o),
-        .ack_o     (data_ack),
-        .data_o    (  data_o)
+        .eop_o     (   eop_o),
+        .credit_i  (credit_i),
+        .data_o    (  data_o),
+        .free_i    (    free),
+        .inport_i  (  inport),
+        .outport_i ( outport)        
     );
 
     HermesSwitch #(

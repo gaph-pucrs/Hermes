@@ -25,18 +25,23 @@ module HermesNoC
     input   logic rst_ni,
 
     input   logic [X_SIZE * Y_SIZE - 1 : 0] rx_i,
-    input   logic [X_SIZE * Y_SIZE - 1 : 0] credit_i,
-    input   logic [      FLIT_SIZE - 1 : 0] data_i [X_SIZE * Y_SIZE - 1:0],
-    output  logic [X_SIZE * Y_SIZE - 1 : 0] tx_o,
+    input   logic [X_SIZE * Y_SIZE - 1 : 0] eop_i,
     output  logic [X_SIZE * Y_SIZE - 1 : 0] credit_o,
+    input   logic [      FLIT_SIZE - 1 : 0] data_i [X_SIZE * Y_SIZE - 1:0],
+
+    output  logic [X_SIZE * Y_SIZE - 1 : 0] tx_o,
+    output  logic [X_SIZE * Y_SIZE - 1 : 0] eop_o,
+    input   logic [X_SIZE * Y_SIZE - 1 : 0] credit_i,    
     output  logic [      FLIT_SIZE - 1 : 0] data_o [X_SIZE * Y_SIZE - 1:0]
 );
 
     logic                     rx            [X_SIZE * Y_SIZE - 1:0][(HERMES_NPORT - 1):0];
+    logic                     eop_i_sig     [X_SIZE * Y_SIZE - 1:0][(HERMES_NPORT - 1):0];
     logic                     credit_i_sig  [X_SIZE * Y_SIZE - 1:0][(HERMES_NPORT - 1):0];
     logic [(FLIT_SIZE - 1):0] data_i_sig    [X_SIZE * Y_SIZE - 1:0][(HERMES_NPORT - 1):0];
 
     logic                     tx            [X_SIZE * Y_SIZE - 1:0][(HERMES_NPORT - 1):0];
+    logic                     eop_o_sig     [X_SIZE * Y_SIZE - 1:0][(HERMES_NPORT - 1):0];
     logic                     credit_o_sig  [X_SIZE * Y_SIZE - 1:0][(HERMES_NPORT - 1):0];
     logic [(FLIT_SIZE - 1):0] data_o_sig    [X_SIZE * Y_SIZE - 1:0][(HERMES_NPORT - 1):0];
 
@@ -52,13 +57,15 @@ module HermesNoC
                 )
                 router
                 (
-                    .clk_i    (       clk_i  ),
-                    .rst_ni   (      rst_ni  ),
+                    .clk_i    (       clk_i       ),
+                    .rst_ni   (      rst_ni       ),
                     .rx_i     (          rx[index]),
-                    .credit_i (credit_i_sig[index]),
+                    .eop_i    (   eop_i_sig[index]),
+                    .credit_o (credit_o_sig[index]),
                     .data_i   (  data_i_sig[index]),
                     .tx_o     (          tx[index]),
-                    .credit_o (credit_o_sig[index]),
+                    .eop_o    (   eop_o_sig[index]),
+                    .credit_i (credit_i_sig[index]),                    
                     .data_o   (  data_o_sig[index])
                 );
             end
@@ -70,55 +77,65 @@ module HermesNoC
             for (int y = 0; y < Y_SIZE; y++) begin
                 automatic int index = y*X_SIZE + x;
 
-                rx[index][HERMES_LOCAL]           = rx_i[index];
-                credit_i_sig[index][HERMES_LOCAL] = credit_i[index];
-                data_i_sig[index][HERMES_LOCAL]   = data_i[index];
-                tx_o[index]                       = tx[index][HERMES_LOCAL];
-                credit_o[index]                   = credit_o_sig[index][HERMES_LOCAL];
-                data_o[index]                     = data_o_sig[index][HERMES_LOCAL];
+                rx          [index][HERMES_LOCAL] = rx_i        [index];
+                eop_i_sig   [index][HERMES_LOCAL] = eop_i       [index];
+                credit_i_sig[index][HERMES_LOCAL] = credit_i    [index];
+                data_i_sig  [index][HERMES_LOCAL] = data_i      [index];
+                tx_o        [index]               = tx          [index][HERMES_LOCAL];
+                eop_o       [index]               = eop_o_sig   [index][HERMES_LOCAL];
+                credit_o    [index]               = credit_o_sig[index][HERMES_LOCAL];
+                data_o      [index]               = data_o_sig  [index][HERMES_LOCAL];
                 
                 if (x != X_SIZE - 1) begin
-                    rx[index][HERMES_EAST]           = tx[index + 1][HERMES_WEST];
+                    rx          [index][HERMES_EAST] = tx          [index + 1][HERMES_WEST];
+                    eop_i_sig   [index][HERMES_EAST] = eop_o_sig   [index + 1][HERMES_WEST];
                     credit_i_sig[index][HERMES_EAST] = credit_o_sig[index + 1][HERMES_WEST];
-                    data_i_sig[index][HERMES_EAST]   = data_o_sig[index + 1][HERMES_WEST];
+                    data_i_sig  [index][HERMES_EAST] = data_o_sig  [index + 1][HERMES_WEST];
                 end
                 else begin
-                    rx[index][HERMES_EAST]           = 1'b0;
+                    rx          [index][HERMES_EAST] = 1'b0;
+                    eop_i_sig   [index][HERMES_EAST] = 1'b0;
                     credit_i_sig[index][HERMES_EAST] = 1'b0;
-                    data_i_sig[index][HERMES_EAST]   = '0;
+                    data_i_sig  [index][HERMES_EAST] = '0;
                 end
 
                 if (x != 0) begin
-                    rx[index][HERMES_WEST]           = tx[index - 1][HERMES_EAST];
+                    rx          [index][HERMES_WEST] = tx          [index - 1][HERMES_EAST];
+                    eop_i_sig   [index][HERMES_WEST] = eop_o_sig   [index - 1][HERMES_EAST];
                     credit_i_sig[index][HERMES_WEST] = credit_o_sig[index - 1][HERMES_EAST];
-                    data_i_sig[index][HERMES_WEST]   = data_o_sig[index - 1][HERMES_EAST];
+                    data_i_sig  [index][HERMES_WEST] = data_o_sig  [index - 1][HERMES_EAST];
                 end
                 else begin
-                    rx[index][HERMES_WEST]           = 1'b0;
+                    rx          [index][HERMES_WEST] = 1'b0;
+                    eop_i_sig   [index][HERMES_WEST] = 1'b0;
                     credit_i_sig[index][HERMES_WEST] = 1'b0;
-                    data_i_sig[index][HERMES_WEST]   = '0;
+                    data_i_sig  [index][HERMES_WEST] = '0;
                 end
 
                 if (y != Y_SIZE - 1) begin
-                    rx[index][HERMES_NORTH]           = tx[index + X_SIZE][HERMES_SOUTH];
+                    rx          [index][HERMES_NORTH] = tx          [index + X_SIZE][HERMES_SOUTH];
+                    eop_i_sig   [index][HERMES_NORTH] = eop_o_sig   [index + X_SIZE][HERMES_SOUTH];
                     credit_i_sig[index][HERMES_NORTH] = credit_o_sig[index + X_SIZE][HERMES_SOUTH];
-                    data_i_sig[index][HERMES_NORTH]   = data_o_sig[index + X_SIZE][HERMES_SOUTH];
+                    data_i_sig  [index][HERMES_NORTH] = data_o_sig  [index + X_SIZE][HERMES_SOUTH];
                 end
                 else begin
-                    rx[index][HERMES_NORTH]           = 1'b0;
+                    rx          [index][HERMES_NORTH] = 1'b0;
+                    eop_i_sig   [index][HERMES_NORTH] = 1'b0;
                     credit_i_sig[index][HERMES_NORTH] = 1'b0;
-                    data_i_sig[index][HERMES_NORTH]   = '0;
+                    data_i_sig  [index][HERMES_NORTH] = '0;
                 end
 
                 if (y != 0) begin
-                    rx[index][HERMES_SOUTH]           = tx[index - X_SIZE][HERMES_NORTH];
+                    rx          [index][HERMES_SOUTH] = tx          [index - X_SIZE][HERMES_NORTH];
+                    eop_i_sig   [index][HERMES_SOUTH] = eop_o_sig   [index - X_SIZE][HERMES_NORTH];
                     credit_i_sig[index][HERMES_SOUTH] = credit_o_sig[index - X_SIZE][HERMES_NORTH];
-                    data_i_sig[index][HERMES_SOUTH]   = data_o_sig[index - X_SIZE][HERMES_NORTH];
+                    data_i_sig  [index][HERMES_SOUTH] = data_o_sig  [index - X_SIZE][HERMES_NORTH];
                 end
                 else begin
-                    rx[index][HERMES_SOUTH]           = 1'b0;
+                    rx          [index][HERMES_SOUTH] = 1'b0;
+                    eop_i_sig   [index][HERMES_SOUTH] = 1'b0;
                     credit_i_sig[index][HERMES_SOUTH] = 1'b0;
-                    data_i_sig[index][HERMES_SOUTH]   = '0;
+                    data_i_sig  [index][HERMES_SOUTH] = '0;
                 end
             end
         end
