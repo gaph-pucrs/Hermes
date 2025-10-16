@@ -46,6 +46,11 @@ module HermesBuffer
     output logic sending_o
 );
 
+    /* verilator lint_off UNUSEDSIGNAL */
+    logic almost_full;
+    logic almost_empty;
+    /* verilator lint_on UNUSEDSIGNAL */
+
     logic               tx;
     logic               eop;
     logic [FLIT_SIZE:0] data; /* 1 bit extra for EOP */
@@ -58,15 +63,17 @@ module HermesBuffer
         .DATA_SIZE  (FLIT_SIZE + 1), /* 1 bit extra for EOP */
         .BUFFER_SIZE(BUFFER_SIZE  )
     ) ringbuffer (
-        .clk_i    (clk_i          ),
-        .rst_ni   (rst_ni         ),
-        .buf_rst_i(1'b0           ),
-        .rx_i     (rx_i           ),
-        .rx_ack_o (credit_o       ),
-        .data_i   ({eop_i, data_i}),
-        .tx_o     (tx             ),
-        .tx_ack_i (data_ack_i     ),
-        .data_o   (data           )
+        .clk_i         (clk_i          ),
+        .rst_ni        (rst_ni         ),
+        .buf_rst_i     (1'b0           ),
+        .rx_i          (rx_i           ),
+        .rx_ack_o      (credit_o       ),
+        .data_i        ({eop_i, data_i}),
+        .tx_o          (tx             ),
+        .tx_ack_i      (data_ack_i     ),
+        .data_o        (data           ),
+        .almost_full_o (almost_full    ),
+        .almost_empty_o(almost_empty   )
     );
 
     /* FSM Control */
