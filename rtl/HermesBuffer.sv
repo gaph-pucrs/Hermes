@@ -107,7 +107,8 @@ module HermesBuffer
     assign sending_o = (state == SEND_PAYLOAD);
 
     /* Routing request control*/
-    assign req_o = tx && (state == SEND_REQ);
+    /* Bypass buffer when it's empty to start routing right away */
+    assign req_o = (tx || (rx_i && credit_o)) && (state == SEND_REQ);
 
     /* Data request control */
     assign data_av_o = tx && (state == SEND_PAYLOAD);
