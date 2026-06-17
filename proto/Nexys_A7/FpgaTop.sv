@@ -16,8 +16,8 @@
 /* All sources added via build.tcl read_verilog — no includes needed here. */
 
 module FpgaTop #(
-    parameter int X_SIZE    = 4,
-    parameter int Y_SIZE    = 4,
+    parameter int X_SIZE    = 8,
+    parameter int Y_SIZE    = 8,
     parameter int FLIT_SIZE = 32,
     /* ponytail: 10000 gives ~87 µs between packets; UART takes ~870 µs for 10 bytes,
        so ~1 in 10 measurements is printed. Increase to 100000 for 1-to-1. */
