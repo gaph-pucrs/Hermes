@@ -33,17 +33,14 @@ module HermesSwitch
     output hermes_port_t             outport_o [(HERMES_NPORT - 1):0]
 );
 
-    hermes_port_t                   dirs [2:0];
     localparam NDIM = 3;
-    logic [($clog2(NDIM - 1)):0]        dim;
 
     /* FSM Control */
-    typedef enum logic [5:0] {
-        RT_WAIT   = 6'b000010,
-        RT_ARBIT  = 6'b000100,
-        RT_SWITCH = 6'b001000,
-        RT_MUX    = 6'b010000,
-        RT_ACK    = 6'b100000
+    typedef enum logic [3:0] {
+        RT_ARBIT  = 4'b0001,
+        RT_ROUTE  = 4'b0010,
+        RT_SWITCH = 4'b0100,
+        RT_ACK    = 4'b1000
     } fsm_t;
 
     fsm_t state;
@@ -51,7 +48,7 @@ module HermesSwitch
 
     always_ff @(posedge clk_i or negedge rst_ni) begin
         if (!rst_ni)
-            state <= RT_WAIT;
+            state <= RT_ARBIT;
         else
             state <= next_state;
     end
@@ -63,15 +60,17 @@ module HermesSwitch
             has_req |= req_i[i];
     end
 
+    hermes_port_t                   dirs [2:0];
+    logic [($clog2(NDIM - 1)):0]        dim;
+
     /* FSM transitions */
     always_comb begin
         case (state)
-            RT_WAIT:    next_state = has_req ? RT_ARBIT : RT_WAIT;
-            RT_ARBIT:   next_state = RT_SWITCH;
-            RT_SWITCH:  next_state = free_o[dirs[dim]] ? RT_MUX : RT_ARBIT;
-            RT_MUX:     next_state = RT_ACK;
-            RT_ACK:     next_state = RT_WAIT;
-            default:    next_state = RT_WAIT;
+            RT_ARBIT:  next_state = has_req           ? RT_ROUTE  : RT_ARBIT;
+            RT_ROUTE:  next_state = free_o[dirs[dim]] ? RT_SWITCH : RT_ARBIT;
+            RT_SWITCH: next_state = RT_ACK;
+            RT_ACK:    next_state = RT_ARBIT;
+            default:   next_state = RT_ARBIT;
         endcase
     end
 
@@ -108,7 +107,7 @@ module HermesSwitch
     always_ff @(posedge clk_i or negedge rst_ni) begin
         if (!rst_ni)
             sel_port <= hermes_port_t'('0);
-        else if (state == RT_ARBIT) 
+        else if (state == RT_ARBIT)
             sel_port <= next_port;
     end
 
@@ -159,7 +158,7 @@ module HermesSwitch
                 free_o[i] <= 1'b1;
         end
         else begin
-            if (state == RT_MUX)
+            if (state == RT_SWITCH)
                 free_o[dirs[dim]] <= 1'b0;
 
             for (int i = 0; i < HERMES_NPORT; i++) begin
@@ -177,7 +176,7 @@ module HermesSwitch
                 inport_o[i]  <= HERMES_EAST;
             end
         end
-        else if (state == RT_MUX) begin
+        else if (state == RT_SWITCH) begin
             outport_o[sel_port] <= dirs[dim];
             inport_o[dirs[dim]] <= sel_port;
         end
