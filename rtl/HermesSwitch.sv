@@ -33,12 +33,16 @@ module HermesSwitch
     output hermes_port_t             outport_o [(HERMES_NPORT - 1):0]
 );
 
-    localparam NDIM = 3;
+    localparam int         NDIM        = 3;
+    localparam logic [7:0] ADDRS [1:0] = {ADDRESS[7:0], ADDRESS[15:8]};
 
-    /* FSM Control */
+////////////////////////////////////////////////////////////////////////////////
+// FSM Control
+////////////////////////////////////////////////////////////////////////////////
+
     typedef enum logic [1:0] {
-        RT_ROUTE  = 2'b01,
-        RT_SWITCH = 2'b10
+        RT_ARBIT  = 2'b01,
+        RT_ROUTE  = 2'b10
     } fsm_t;
 
     fsm_t state;
@@ -46,7 +50,7 @@ module HermesSwitch
 
     always_ff @(posedge clk_i or negedge rst_ni) begin
         if (!rst_ni)
-            state <= RT_ROUTE;
+            state <= RT_ARBIT;
         else
             state <= next_state;
     end
@@ -58,20 +62,18 @@ module HermesSwitch
             has_req |= req_i[i];
     end
 
-    hermes_port_t sel_dir;
-    logic [($clog2(NDIM - 1)):0] dim;
-    hermes_port_t dirs [2:0];
-
     /* FSM transitions */
     always_comb begin
         case (state)
-            RT_ROUTE:  next_state = has_req && free_o[dirs[dim]] ? RT_SWITCH  : RT_ROUTE;
-            RT_SWITCH: next_state = RT_ROUTE;
-            default:   next_state = RT_ROUTE;
+            RT_ARBIT:  next_state = has_req ? RT_ROUTE : RT_ARBIT;
+            default:   next_state = RT_ARBIT; /* RT_ROUTE */
         endcase
     end
 
-    /* Arbitration signals */
+////////////////////////////////////////////////////////////////////////////////
+// Arbitration Control
+////////////////////////////////////////////////////////////////////////////////
+
     hermes_port_t sel_port;
     hermes_port_t next_port;
 
@@ -100,31 +102,32 @@ module HermesSwitch
         end
     end
 
-    /* Arbitration control */
     always_ff @(posedge clk_i or negedge rst_ni) begin
         if (!rst_ni)
             sel_port <= hermes_port_t'('0);
-        else if (state == RT_ROUTE)
+        else if (state == RT_ARBIT)
             sel_port <= next_port;
     end
 
-    /* Routing control */
-    localparam logic [7:0] ADDRS [1:0] = {ADDRESS[7:0], ADDRESS[15:8]};
+////////////////////////////////////////////////////////////////////////////////
+// Routing Control
+////////////////////////////////////////////////////////////////////////////////
 
     logic [15:0] target;
-    assign target = data_i[next_port][15:0];
+    assign target = data_i[sel_port][15:0];
 
     logic [7:0] tgts [1:0];
     assign tgts[0] = target[15:8];
     assign tgts[1] = target[7:0];
 
     logic force_io;
-    assign force_io = data_i[next_port][FLIT_SIZE - 1];
+    assign force_io = data_i[sel_port][FLIT_SIZE - 1];
 
     hermes_port_t force_port;
-    assign force_port = hermes_port_t'({1'b0, data_i[next_port][(FLIT_SIZE - 2):(FLIT_SIZE - $clog2(HERMES_NPORT))]});   
+    assign force_port = hermes_port_t'({1'b0, data_i[sel_port][(FLIT_SIZE - 2):(FLIT_SIZE - $clog2(HERMES_NPORT))]});   
 
     /* Decide which dimension (x,y, or local) routing will take */
+    logic [($clog2(NDIM - 1)):0] dim;
     always_comb begin
         dim = $clog2(NDIM)'(NDIM - 1);
         for (int i = 0; i < NDIM - 1; i++) begin
@@ -135,16 +138,17 @@ module HermesSwitch
         end
     end
 
+    hermes_port_t dirs [2:0];
     assign dirs[0] = (tgts[0] > ADDRS[0]) ? HERMES_EAST  : HERMES_WEST;
     assign dirs[1] = (tgts[1] > ADDRS[1]) ? HERMES_NORTH : HERMES_SOUTH;
     assign dirs[2] = force_io ? force_port : HERMES_LOCAL;
 
-    always_ff @(posedge clk_i or negedge rst_ni) begin
-        if (!rst_ni)
-            sel_dir <= HERMES_LOCAL;
-        else if (state == RT_ROUTE)
-            sel_dir <= dirs[dim];
-    end
+    hermes_port_t sel_dir;
+    assign sel_dir = dirs[dim];
+
+////////////////////////////////////////////////////////////////////////////////
+// Output Control
+////////////////////////////////////////////////////////////////////////////////
 
     /* Active port control */
     logic sending_r [(HERMES_NPORT - 1):0];
@@ -162,7 +166,7 @@ module HermesSwitch
                 free_o[i] <= 1'b1;
         end
         else begin
-            if (state == RT_SWITCH)
+            if (state == RT_ROUTE)
                 free_o[sel_dir] <= 1'b0;
 
             for (int i = 0; i < HERMES_NPORT; i++) begin
@@ -180,24 +184,17 @@ module HermesSwitch
                 inport_o[i]  <= HERMES_EAST;
             end
         end
-        else if (state == RT_SWITCH) begin
+        else if (free_o[sel_dir] && state == RT_ROUTE) begin
             outport_o[sel_port] <= sel_dir;
             inport_o[sel_dir]   <= sel_port;
         end
     end
 
-    /* Acknowledge control */
-    always_ff @(posedge clk_i or negedge rst_ni) begin
-        if (!rst_ni) begin
-            for (int i = 0; i < HERMES_NPORT; i++)
-                ack_o[i] <= 1'b0;
-        end
-        else begin
-            unique case (state)
-                RT_SWITCH: ack_o[sel_port] <= 1'b1;
-                default:   ack_o[sel_port] <= 1'b0;
-            endcase
-        end
+    always_comb begin
+        for (int i = 0; i < HERMES_NPORT; i++)
+            ack_o[i] = 1'b0;
+
+        ack_o[sel_port] = free_o[sel_dir] && (state == RT_ROUTE);
     end
 
 endmodule
