@@ -28,7 +28,6 @@ module HermesRouter
     input  logic                     eop_i    [(HERMES_NPORT - 1):0],
     output logic                     credit_o [(HERMES_NPORT - 1):0],
     input  logic [(FLIT_SIZE - 1):0] data_i   [(HERMES_NPORT - 1):0],
-
     output logic                     tx_o     [(HERMES_NPORT - 1):0],
     output logic                     eop_o    [(HERMES_NPORT - 1):0],
     input  logic                     credit_i [(HERMES_NPORT - 1):0],
