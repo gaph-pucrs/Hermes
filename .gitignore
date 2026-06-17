@@ -3,3 +3,5 @@ transcript
 *.wlf
 *.ini
 *.txt
+.Xil
+build
