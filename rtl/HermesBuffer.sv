@@ -77,10 +77,9 @@ module HermesBuffer
     );
 
     /* FSM Control */
-    typedef enum logic [2:0] {
-        SEND_INIT    = 3'b001,
-        SEND_REQ     = 3'b010,
-        SEND_PAYLOAD = 3'b100
+    typedef enum logic [1:0] {
+        SEND_REQ     = 2'b01,
+        SEND_PAYLOAD = 2'b10
     } fsm_t;
 
     fsm_t state;
@@ -88,30 +87,30 @@ module HermesBuffer
 
     always_ff @(posedge clk_i or negedge rst_ni) begin
         if (!rst_ni)
-            state <= SEND_INIT;
+            state <= SEND_REQ;
         else
             state <= next_state;
     end
 
     always_comb begin
         case (state)
-            SEND_INIT:    next_state = tx         ? SEND_REQ     : SEND_INIT;
-            SEND_REQ:     next_state = req_ack_i  ? SEND_PAYLOAD : SEND_REQ;
+            SEND_REQ:     next_state = req_ack_i ? SEND_PAYLOAD : SEND_REQ;
             SEND_PAYLOAD: next_state = (data_ack_i && tx && eop)
-                                                                 ? SEND_INIT
+                                                                 ? SEND_REQ
                                                                  : SEND_PAYLOAD;
-            default:      next_state = SEND_INIT;
+            default:      next_state = SEND_REQ;
         endcase
     end
 
     /* FSM behavior */
-    /* Routing request control*/
-    assign req_o = (state == SEND_REQ);
-
     /* Active */
     assign sending_o = (state == SEND_PAYLOAD);
 
+    /* Routing request control*/
+    /* Bypass buffer when it's empty to start routing right away */
+    assign req_o = (tx || (rx_i && credit_o)) && (state == SEND_REQ);
+
     /* Data request control */
-    assign data_av_o = (state == SEND_PAYLOAD && tx);
+    assign data_av_o = tx && (state == SEND_PAYLOAD);
 
 endmodule
