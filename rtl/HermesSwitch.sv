@@ -37,10 +37,9 @@ module HermesSwitch
 
     /* FSM Control */
     typedef enum logic [3:0] {
-        RT_ARBIT  = 4'b00001,
-        RT_ROUTE  = 4'b00010,
-        RT_MUX    = 4'b00100,
-        RT_SWITCH = 4'b01000
+        RT_ARBIT  = 3'b0001,
+        RT_ROUTE  = 3'b0010,
+        RT_SWITCH = 3'b0100
     } fsm_t;
 
     fsm_t state;
@@ -61,13 +60,14 @@ module HermesSwitch
     end
 
     hermes_port_t sel_dir;
+    logic [($clog2(NDIM - 1)):0] dim;
+    hermes_port_t dirs [2:0];
 
     /* FSM transitions */
     always_comb begin
         case (state)
-            RT_ARBIT:  next_state = has_req         ? RT_ROUTE  : RT_ARBIT;
-            RT_ROUTE:  next_state = RT_MUX;
-            RT_MUX:    next_state = free_o[sel_dir] ? RT_SWITCH : RT_ARBIT;
+            RT_ARBIT:  next_state = has_req           ? RT_ROUTE  : RT_ARBIT;
+            RT_ROUTE:  next_state = free_o[dirs[dim]] ? RT_SWITCH : RT_ARBIT;
             RT_SWITCH: next_state = RT_ARBIT;
             default:   next_state = RT_ARBIT;
         endcase
@@ -127,7 +127,6 @@ module HermesSwitch
     assign force_port = hermes_port_t'({1'b0, data_i[sel_port][(FLIT_SIZE - 2):(FLIT_SIZE - $clog2(HERMES_NPORT))]});   
 
     /* Decide which dimension (x,y, or local) routing will take */
-    logic [($clog2(NDIM - 1)):0] dim;
     always_comb begin
         dim = $clog2(NDIM)'(NDIM - 1);
         for (int i = 0; i < NDIM - 1; i++) begin
@@ -138,7 +137,6 @@ module HermesSwitch
         end
     end
 
-    hermes_port_t dirs [2:0];
     assign dirs[0] = (tgts[0] > ADDRS[0]) ? HERMES_EAST  : HERMES_WEST;
     assign dirs[1] = (tgts[1] > ADDRS[1]) ? HERMES_NORTH : HERMES_SOUTH;
     assign dirs[2] = force_io ? force_port : HERMES_LOCAL;
