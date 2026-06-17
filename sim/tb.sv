@@ -145,26 +145,30 @@ module tb #(parameter int X_SIZE = 4,
                     end
                     else if (index_rx[j] == packet_size[j] + 1) begin
                         data_in[j]  = {index_rx[j] - 1};
-                        rx_eop      = 1'b1;
+                        rx_eop[j]   = 1'b1;
                     end
                     else begin
                         processed_rx[j] <= 1;
                         rx[j]           = 0;
-                        rx_eop          = 1'b0;
+                        rx_eop[j]       = 1'b0;
                         pkts_sent[j]    = pkts_sent[j] + 1;
+                        $display("[%0d] - Router %2d: DONE SENDING pkt #%0d (total sent: %0d)", $time, j, (j * 100_000) + time_injection[j], pkts_sent[j]);
                     end
 
                     index_rx[j] <= index_rx[j] + 1;
                 end
                 // Read a line from the file and assign values to variables
                 else if (file_handle[j] != 0 && !$feof(file_handle[j])) begin
-                    $fgets(line_buffer[j], file_handle[j]);
-                    $sscanf(line_buffer[j], "%d %d %d %d", time_injection[j], target_x[j], target_y[j], packet_size[j]);
-                    $display("[%0d] - Router %2d: time_injection = %0d, target_x = %0d, target_y = %0d, packet_size = %0d", $time, j, time_injection[j], target_x[j], target_y[j], packet_size[j]);
-                    
-                    index_rx[j]     = 0;
-                    processed_rx[j] <= 0;
-                    printed_rx[j]   <= 0;
+                    if ($fgets(line_buffer[j], file_handle[j]) == 0) begin
+                        $display("[%0d] - Router %2d: WARNING ghost read at EOF — no more packets.", $time, j);
+                    end else begin
+                        $sscanf(line_buffer[j], "%d %d %d %d", time_injection[j], target_x[j], target_y[j], packet_size[j]);
+                        $display("[%0d] - Router %2d: time_injection = %0d, target_x = %0d, target_y = %0d, packet_size = %0d", $time, j, time_injection[j], target_x[j], target_y[j], packet_size[j]);
+
+                        index_rx[j]     = 0;
+                        processed_rx[j] <= 0;
+                        printed_rx[j]   <= 0;
+                    end
                 end
             end
         end
@@ -173,6 +177,7 @@ module tb #(parameter int X_SIZE = 4,
     int          index_tx   [NUM_ROUTERS-1:0];
     int          size_tx    [NUM_ROUTERS-1:0];
     logic [15:0] source_tx  [NUM_ROUTERS-1:0];
+    logic [31:0] pkt_num_tx [NUM_ROUTERS-1:0];
     int          pkts_recv  [NUM_ROUTERS-1:0];
 
     genvar k;
@@ -196,6 +201,11 @@ module tb #(parameter int X_SIZE = 4,
                         $display("[%0d] - Router %2d (%0d, %0d) - Received Package: source = (%2h, %2h) packet_size = %0d latency = %0d", $time, k, pos_x, pos_y, source_tx[k][15:8], source_tx[k][7:0], size_tx[k], int'($time) - int'(data_out[k]));
                         $fwrite(log_handle[k],"%4h %0d %0d\n", source_tx[k], size_tx[k], int'($time) - int'(data_out[k]));
                         pkts_recv[k] = pkts_recv[k] + 1;
+                    end
+                    else if (index_tx[k] == 3) begin
+                        pkt_num_tx[k] <= data_out[k];
+                        $display("[%0d] - Router %2d (%0d, %0d) - Packet ID: %0d (total recv: %0d)", $time, k, pos_x, pos_y, data_out[k], pkts_recv[k]);
+                        $fwrite(log_handle[k], "  pkt_id=%0d\n", data_out[k]);
                     end
 
                     index_tx[k] <= index_tx[k] + 1;
@@ -224,7 +234,13 @@ module tb #(parameter int X_SIZE = 4,
             total_pkts_recv += pkts_recv[i];
         end
 
-        $display("Total Packets Sent:     %02d", total_pkts_sent);
-        $display("Total Packets Received: %02d", total_pkts_recv);
+        $display("Total Packets Sent:     %0d", total_pkts_sent);
+        $display("Total Packets Received: %0d", total_pkts_recv);
+
+        if (total_pkts_recv == total_pkts_sent)
+            $display("PASS: all %0d packets delivered.", total_pkts_sent);
+        else
+            $display("FAIL: %0d packet(s) lost (%0d sent, %0d received).",
+                total_pkts_sent - total_pkts_recv, total_pkts_sent, total_pkts_recv);
     end
 endmodule
