@@ -36,12 +36,11 @@ module HermesSwitch
     localparam NDIM = 3;
 
     /* FSM Control */
-    typedef enum logic [4:0] {
-        RT_ARBIT  = 5'b00001,
-        RT_ROUTE  = 5'b00010,
-        RT_MUX    = 5'b00100,
-        RT_SWITCH = 5'b01000,
-        RT_ACK    = 5'b10000
+    typedef enum logic [3:0] {
+        RT_ARBIT  = 4'b00001,
+        RT_ROUTE  = 4'b00010,
+        RT_MUX    = 4'b00100,
+        RT_SWITCH = 4'b01000
     } fsm_t;
 
     fsm_t state;
@@ -69,8 +68,7 @@ module HermesSwitch
             RT_ARBIT:  next_state = has_req         ? RT_ROUTE  : RT_ARBIT;
             RT_ROUTE:  next_state = RT_MUX;
             RT_MUX:    next_state = free_o[sel_dir] ? RT_SWITCH : RT_ARBIT;
-            RT_SWITCH: next_state = RT_ACK;
-            RT_ACK:    next_state = RT_ARBIT;
+            RT_SWITCH: next_state = RT_ARBIT;
             default:   next_state = RT_ARBIT;
         endcase
     end
@@ -193,11 +191,17 @@ module HermesSwitch
     end
 
     /* Acknowledge control */
-    always_comb begin
-        for (int i = 0; i < HERMES_NPORT; i++)
-            ack_o[i] = 1'b0;
-
-        ack_o[sel_port] = (state == RT_ACK);
+    always_ff @(posedge clk_i or negedge rst_ni) begin
+        if (!rst_ni) begin
+            for (int i = 0; i < HERMES_NPORT; i++)
+                ack_o[i] <= 1'b0;
+        end
+        else begin
+            unique case (state)
+                RT_SWITCH: ack_o[sel_port] <= free_o[sel_dir];
+                default:   ack_o[sel_port] <= 1'b0;
+            endcase
+        end
     end
 
 endmodule
