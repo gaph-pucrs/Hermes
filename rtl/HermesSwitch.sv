@@ -36,10 +36,9 @@ module HermesSwitch
     localparam NDIM = 3;
 
     /* FSM Control */
-    typedef enum logic [3:0] {
-        RT_ARBIT  = 3'b0001,
-        RT_ROUTE  = 3'b0010,
-        RT_SWITCH = 3'b0100
+    typedef enum logic [1:0] {
+        RT_ROUTE  = 2'b01,
+        RT_SWITCH = 2'b10
     } fsm_t;
 
     fsm_t state;
@@ -47,7 +46,7 @@ module HermesSwitch
 
     always_ff @(posedge clk_i or negedge rst_ni) begin
         if (!rst_ni)
-            state <= RT_ARBIT;
+            state <= RT_ROUTE;
         else
             state <= next_state;
     end
@@ -66,10 +65,9 @@ module HermesSwitch
     /* FSM transitions */
     always_comb begin
         case (state)
-            RT_ARBIT:  next_state = has_req           ? RT_ROUTE  : RT_ARBIT;
-            RT_ROUTE:  next_state = free_o[dirs[dim]] ? RT_SWITCH : RT_ARBIT;
-            RT_SWITCH: next_state = RT_ARBIT;
-            default:   next_state = RT_ARBIT;
+            RT_ROUTE:  next_state = has_req && free_o[dirs[dim]] ? RT_SWITCH  : RT_ROUTE;
+            RT_SWITCH: next_state = RT_ROUTE;
+            default:   next_state = RT_ROUTE;
         endcase
     end
 
@@ -106,7 +104,7 @@ module HermesSwitch
     always_ff @(posedge clk_i or negedge rst_ni) begin
         if (!rst_ni)
             sel_port <= hermes_port_t'('0);
-        else if (state == RT_ARBIT)
+        else if (state == RT_ROUTE)
             sel_port <= next_port;
     end
 
@@ -114,17 +112,17 @@ module HermesSwitch
     localparam logic [7:0] ADDRS [1:0] = {ADDRESS[7:0], ADDRESS[15:8]};
 
     logic [15:0] target;
-    assign target = data_i[sel_port][15:0];
+    assign target = data_i[next_port][15:0];
 
     logic [7:0] tgts [1:0];
     assign tgts[0] = target[15:8];
     assign tgts[1] = target[7:0];
 
     logic force_io;
-    assign force_io = data_i[sel_port][FLIT_SIZE - 1];
+    assign force_io = data_i[next_port][FLIT_SIZE - 1];
 
     hermes_port_t force_port;
-    assign force_port = hermes_port_t'({1'b0, data_i[sel_port][(FLIT_SIZE - 2):(FLIT_SIZE - $clog2(HERMES_NPORT))]});   
+    assign force_port = hermes_port_t'({1'b0, data_i[next_port][(FLIT_SIZE - 2):(FLIT_SIZE - $clog2(HERMES_NPORT))]});   
 
     /* Decide which dimension (x,y, or local) routing will take */
     always_comb begin
@@ -196,7 +194,7 @@ module HermesSwitch
         end
         else begin
             unique case (state)
-                RT_SWITCH: ack_o[sel_port] <= free_o[sel_dir];
+                RT_SWITCH: ack_o[sel_port] <= 1'b1;
                 default:   ack_o[sel_port] <= 1'b0;
             endcase
         end
