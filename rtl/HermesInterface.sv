@@ -1,6 +1,7 @@
 interface HermesInterface
-    import HermesPkg::*;
-;
+#(
+    parameter FLIT_SIZE = 32
+);
 
 logic                   rx_i;
 logic                   eop_i;
@@ -26,4 +27,4 @@ modport TX (
     output eop_o
 );
 
-endinterface 
+endinterface
