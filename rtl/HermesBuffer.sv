@@ -49,6 +49,7 @@ module HermesBuffer
     /* verilator lint_off UNUSEDSIGNAL */
     logic almost_full;
     logic almost_empty;
+    logic [$clog2(BUFFER_SIZE + 1) - 1:0] count;
     /* verilator lint_on UNUSEDSIGNAL */
 
     logic               tx;
@@ -72,6 +73,7 @@ module HermesBuffer
         .tx_o          (tx             ),
         .tx_ack_i      (data_ack_i     ),
         .data_o        (data           ),
+        .count_o       (count          ),
         .almost_full_o (almost_full    ),
         .almost_empty_o(almost_empty   )
     );
